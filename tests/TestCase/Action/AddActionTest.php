@@ -27,6 +27,18 @@ class AddActionTest extends IntegrationTestCase
     public $tableClass = 'Crud\Test\App\Model\Table\BlogsTable';
 
     /**
+     * setUp()
+     *
+     * @return void
+     */
+    public function setUp()
+    {
+        parent::setUp();
+
+        $this->useHttpServer(true);
+    }
+
+    /**
      * Test the normal HTTP GET flow of _get
      *
      * @return void
@@ -34,19 +46,19 @@ class AddActionTest extends IntegrationTestCase
     public function testActionGet()
     {
         $this->get('/blogs/add');
-        $result = $this->_response->body();
+        $result = (string)$this->_response->getBody();
 
-        $expected = ['tag' => 'legend', 'content' => 'New Blog'];
-        $this->assertTag($expected, $result, 'legend do not match the expected value');
+        $expected = '<legend>New Blog</legend>';
+        $this->assertContains($expected, $result, 'legend do not match the expected value');
 
-        $expected = ['id' => 'id', 'attributes' => ['value' => '']];
-        $this->assertTag($expected, $result, '"id" do not match the expected value');
+        $expected = '<input type="hidden" name="id" id="id"/>';
+        $this->assertContains($expected, $result, '"id" do not match the expected value');
 
-        $expected = ['id' => 'name', 'attributes' => ['value' => '']];
-        $this->assertTag($expected, $result, '"name" do not match the expected value');
+        $expected = '<input type="text" name="name" maxlength="255" id="name"/>';
+        $this->assertContains($expected, $result, '"name" do not match the expected value');
 
-        $expected = ['id' => 'body', 'attributes' => ['value' => '']];
-        $this->assertTag($expected, $result, '"body" do not match the expected value');
+        $expected = '<textarea name="body" id="body" rows="5"></textarea>';
+        $this->assertContains($expected, $result, '"body" do not match the expected value');
     }
 
     /**
@@ -59,19 +71,19 @@ class AddActionTest extends IntegrationTestCase
     public function testActionGetWithQueryArgs()
     {
         $this->get('/blogs/add?name=test');
-        $result = $this->_response->body();
+        $result = (string)$this->_response->getBody();
 
-        $expected = ['tag' => 'legend', 'content' => 'New Blog'];
-        $this->assertTag($expected, $result, 'legend do not match the expected value');
+        $expected = '<legend>New Blog</legend>';
+        $this->assertContains($expected, $result, 'legend do not match the expected value');
 
-        $expected = ['id' => 'id', 'attributes' => ['value' => '']];
-        $this->assertTag($expected, $result, '"id" do not match the expected value');
+        $expected = '<input type="hidden" name="id" id="id"/>';
+        $this->assertContains($expected, $result, '"id" do not match the expected value');
 
-        $expected = ['id' => 'name', 'attributes' => ['value' => 'test']];
-        $this->assertTag($expected, $result, '"name" do not match the expected value');
+        $expected = '<input type="text" name="name" maxlength="255" id="name" value="test"/>';
+        $this->assertContains($expected, $result, '"name" do not match the expected value');
 
-        $expected = ['id' => 'body', 'attributes' => ['value' => '']];
-        $this->assertTag($expected, $result, '"body" do not match the expected value');
+        $expected = '<textarea name="body" id="body" rows="5"></textarea>';
+        $this->assertContains($expected, $result, '"body" do not match the expected value');
     }
 
     /**
@@ -82,13 +94,13 @@ class AddActionTest extends IntegrationTestCase
     public function testActionPost()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -127,13 +139,13 @@ class AddActionTest extends IntegrationTestCase
     public function testActionPostWithAddRedirect()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -172,13 +184,13 @@ class AddActionTest extends IntegrationTestCase
     public function testActionPostWithEditRedirect()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -216,13 +228,13 @@ class AddActionTest extends IntegrationTestCase
     public function testActionPostErrorSave()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -269,13 +281,13 @@ class AddActionTest extends IntegrationTestCase
     public function testActionPostValidationErrors()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -292,7 +304,7 @@ class AddActionTest extends IntegrationTestCase
                 $this->_subscribeToEvents($this->_controller);
 
                 $this->_controller->Blogs
-                    ->validator()
+                    ->getValidator()
                     ->requirePresence('name')
                     ->add('name', [
                         'length' => [
@@ -313,11 +325,12 @@ class AddActionTest extends IntegrationTestCase
         $this->assertFalse($this->_subject->success);
         $this->assertFalse($this->_subject->created);
 
-        $expected = [
-            'class' => 'error-message',
-            'content' => 'Name need to be at least 10 characters long'
-        ];
-        $this->assertTag($expected, $this->_response->body(), 'Could not find validation error in HTML');
+        $expected = '<div class="error-message">Name need to be at least 10 characters long</div>';
+        $this->assertContains(
+            $expected,
+            (string)$this->_response->getBody(),
+            'Could not find validation error in HTML'
+        );
     }
 
     /**
@@ -342,24 +355,15 @@ class AddActionTest extends IntegrationTestCase
      */
     public function testApiGet($method)
     {
-        $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
-            function ($event) {
-                $this->_controller->Crud->addListener('api', 'Crud.Api');
-            }
-        );
-
-        Router::extensions(['json']);
         Router::scope('/', function ($routes) {
-            $routes->extensions(['json']);
+            $routes->setExtensions(['json']);
             $routes->fallbacks();
         });
 
-        $this->{$method}('/blogs/add.json');
+        $this->{$method}('/Blogs/add.json');
 
         $this->assertResponseError();
-        $this->assertResponseContains($this->_response->body(), 'Wrong request method');
+        $this->assertResponseContains('Method Not Allowed');
     }
 
     /**
@@ -385,13 +389,13 @@ class AddActionTest extends IntegrationTestCase
     public function testApiCreate($method)
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->never())
@@ -404,8 +408,6 @@ class AddActionTest extends IntegrationTestCase
             }
         );
 
-        Router::extensions('json');
-
         $this->{$method}('/blogs/add.json', [
             'name' => '6th blog post',
             'body' => 'Amazing blog post'
@@ -415,7 +417,7 @@ class AddActionTest extends IntegrationTestCase
         $this->assertTrue($this->_subject->created);
         $this->assertEquals(
             ['success' => true, 'data' => ['id' => 6]],
-            json_decode($this->_response->body(), true)
+            json_decode($this->_response->getBody(), true)
         );
     }
 
@@ -429,16 +431,18 @@ class AddActionTest extends IntegrationTestCase
      */
     public function testApiCreateError($method)
     {
-        Router::extensions('json');
-
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                if (get_class($this->_controller) === 'Cake\Controller\ErrorController') {
+                    return;
+                }
+
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->never())
@@ -449,7 +453,7 @@ class AddActionTest extends IntegrationTestCase
                 $this->_controller->Crud->addListener('api', 'Crud.Api');
 
                 $this->_controller->Blogs
-                    ->validator()
+                    ->getValidator()
                     ->requirePresence('name')
                     ->add('name', [
                         'length' => [
@@ -465,8 +469,8 @@ class AddActionTest extends IntegrationTestCase
             'body' => 'Amazing blog post'
         ]);
 
-        $this->assertResponseCode(412);
-        $this->assertResponseContains($this->_response->body(), 'A validation error occurred');
+        $this->assertResponseCode(422);
+        $this->assertResponseContains('A validation error occurred');
     }
 
     /**
@@ -479,16 +483,18 @@ class AddActionTest extends IntegrationTestCase
      */
     public function testApiCreateErrors($method)
     {
-        Router::extensions('json');
-
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                if (get_class($this->_controller) === 'Cake\Controller\ErrorController') {
+                    return;
+                }
+
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->never())
@@ -499,7 +505,7 @@ class AddActionTest extends IntegrationTestCase
                 $this->_controller->Crud->addListener('api', 'Crud.Api');
 
                 $this->_controller->Blogs
-                    ->validator()
+                    ->getValidator()
                     ->requirePresence('name')
                     ->requirePresence('body')
                     ->add('name', [
@@ -517,5 +523,114 @@ class AddActionTest extends IntegrationTestCase
 
         $this->assertResponseError();
         $this->assertResponseContains('2 validation errors occurred');
+    }
+
+    /**
+     * Test the flow when the beforeSave event is stopped using the default
+     * subject `success` state (false).
+     *
+     * @return void
+     */
+    public function testStopAddWithDefaultSubjectSuccess()
+    {
+        $this->_eventManager->on(
+            'Controller.initialize',
+            ['priority' => 11],
+            function ($event) {
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
+
+                $this->_controller->Flash
+                    ->expects($this->once())
+                    ->method('set')
+                    ->with(
+                        'Could not create blog',
+                        [
+                            'element' => 'default',
+                            'params' => ['class' => 'message error', 'original' => 'Could not create blog'],
+                            'key' => 'flash'
+                        ]
+                    );
+
+                $this->_subscribeToEvents($this->_controller);
+
+                $this->_controller->Crud->on('beforeSave', function ($event) {
+                    $event->stopPropagation();
+                });
+
+                $this->_controller->Blogs = $this->getMockForModel(
+                    $this->tableClass,
+                    ['add'],
+                    ['alias' => 'Blogs', 'table' => 'blogs']
+                );
+
+                $this->_controller->Blogs
+                    ->expects($this->never())
+                    ->method('add');
+            }
+        );
+
+        $this->post('/blogs/add');
+
+        $this->assertEvents(['beforeSave', 'setFlash', 'beforeRedirect']);
+        $this->assertFalse($this->_subject->success);
+        $this->assertRedirect('/blogs');
+    }
+
+    /**
+     * Test the flow when the beforeSave event is stopped using manually
+     * set non-default subject `success` state (true).
+     *
+     * @return void
+     */
+    public function testStopAddWithManuallySetSubjectSuccess()
+    {
+        $this->_eventManager->on(
+            'Controller.initialize',
+            ['priority' => 11],
+            function ($event) {
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
+
+                $this->_controller->Flash
+                    ->expects($this->once())
+                    ->method('set')
+                    ->with(
+                        'Successfully created blog',
+                        [
+                            'element' => 'default',
+                            'params' => ['class' => 'message success', 'original' => 'Successfully created blog'],
+                            'key' => 'flash'
+                        ]
+                    );
+
+                $this->_subscribeToEvents($this->_controller);
+
+                $this->_controller->Crud->on('beforeSave', function ($event) {
+                    $event->stopPropagation();
+                    $event->getSubject()->success = true; // assert this
+                });
+
+                $this->_controller->Blogs = $this->getMockForModel(
+                    $this->tableClass,
+                    ['add'],
+                    ['alias' => 'Blogs', 'table' => 'blogs']
+                );
+
+                $this->_controller->Blogs
+                    ->expects($this->never())
+                    ->method('add');
+            }
+        );
+
+        $this->post('/blogs/add');
+
+        $this->assertEvents(['beforeSave', 'afterSave', 'setFlash', 'beforeRedirect']);
+        $this->assertTrue($this->_subject->success);
+        $this->assertRedirect('/blogs');
     }
 }

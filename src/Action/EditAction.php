@@ -1,6 +1,7 @@
 <?php
 namespace Crud\Action;
 
+use Crud\Error\Exception\ValidationException;
 use Crud\Event\Subject;
 use Crud\Traits\FindMethodTrait;
 use Crud\Traits\RedirectTrait;
@@ -71,14 +72,14 @@ class EditAction extends BaseAction
             ]
         ],
         'api' => [
-            'methods' => ['put', 'post'],
+            'methods' => ['put', 'post', 'patch'],
             'success' => [
                 'code' => 200
             ],
             'error' => [
                 'exception' => [
                     'type' => 'validate',
-                    'class' => '\Crud\Error\Exception\ValidationException'
+                    'class' => ValidationException::class
                 ]
             ]
         ],
@@ -88,9 +89,9 @@ class EditAction extends BaseAction
     /**
      * HTTP GET handler
      *
-     * @param string $id Record id
+     * @param string|null $id Record id
      * @return void
-     * @throws \Cake\Network\Exception\NotFoundException If record not found
+     * @throws \Cake\Http\Exception\NotFoundException If record not found
      */
     protected function _get($id = null)
     {
@@ -104,8 +105,8 @@ class EditAction extends BaseAction
     /**
      * HTTP PUT handler
      *
-     * @param mixed $id Record id
-     * @return void|\Cake\Network\Response
+     * @param string|null $id Record id
+     * @return \Cake\Http\Response|null
      */
     protected function _put($id = null)
     {
@@ -114,7 +115,7 @@ class EditAction extends BaseAction
 
         $entity = $this->_table()->patchEntity(
             $this->_findRecord($id, $subject),
-            $this->_request()->data,
+            $this->_request()->getData(),
             $this->saveOptions()
         );
 
@@ -123,7 +124,7 @@ class EditAction extends BaseAction
             return $this->_success($subject);
         }
 
-        return $this->_error($subject);
+        $this->_error($subject);
     }
 
     /**
@@ -131,10 +132,23 @@ class EditAction extends BaseAction
      *
      * Thin proxy for _put
      *
-     * @param mixed $id Record id
-     * @return void|\Cake\Network\Response
+     * @param string|null $id Record id
+     * @return \Cake\Http\Response|null
      */
     protected function _post($id = null)
+    {
+        return $this->_put($id);
+    }
+
+    /**
+     * HTTP PATCH handler
+     *
+     * Thin proxy for _put
+     *
+     * @param mixed $id Record id
+     * @return \Cake\Http\Response|null
+     */
+    protected function _patch($id = null)
     {
         return $this->_put($id);
     }
@@ -143,7 +157,7 @@ class EditAction extends BaseAction
      * Success callback
      *
      * @param \Crud\Event\Subject $subject Event subject
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      */
     protected function _success(Subject $subject)
     {

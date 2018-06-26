@@ -1,7 +1,7 @@
 <?php
 namespace Crud\Action\Bulk;
 
-use Cake\Network\Exception\BadRequestException;
+use Cake\Http\Exception\BadRequestException;
 use Cake\ORM\Query;
 use Cake\Utility\Hash;
 use Crud\Action\BaseAction as CrudBaseAction;
@@ -43,7 +43,7 @@ abstract class BaseAction extends CrudBaseAction
     /**
      * Handle a bulk event
      *
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      */
     protected function _handle()
     {
@@ -71,15 +71,15 @@ abstract class BaseAction extends CrudBaseAction
      */
     protected function _processIds()
     {
-        $ids = $this->_controller()->request->data('id');
+        $ids = $this->_controller()->request->getData('id');
 
         $all = false;
         if (is_array($ids)) {
-            $all = Hash::get((array)$ids, '_all', false);
+            $all = Hash::get($ids, '_all', false);
             unset($ids['_all']);
         }
 
-        if (!is_array($ids) || !Hash::numeric(array_keys($ids))) {
+        if (!is_array($ids)) {
             throw new BadRequestException('Bad request data');
         }
 
@@ -87,10 +87,12 @@ abstract class BaseAction extends CrudBaseAction
             foreach ($ids as $key => $value) {
                 $ids[$key] = 1;
             }
+            $ids = array_keys($ids);
         }
 
         $ids = array_filter($ids);
-        return array_keys($ids);
+
+        return array_values($ids);
     }
 
     /**
@@ -103,7 +105,9 @@ abstract class BaseAction extends CrudBaseAction
     {
         $repository = $this->_table();
 
-        $query = $repository->find($this->findMethod(), $this->_getFindConfig($ids));
+        list($finder, $options) = $this->_extractFinder();
+        $options = array_merge($options, $this->_getFindConfig($ids));
+        $query = $repository->find($finder, $options);
 
         $subject = $this->_subject();
         $subject->set([
@@ -123,13 +127,12 @@ abstract class BaseAction extends CrudBaseAction
      */
     protected function _getFindConfig(array $ids)
     {
-        $config = (array)$this->config('findConfig');
+        $config = (array)$this->getConfig('findConfig');
         if (!empty($config)) {
             return $config;
         }
 
-        $ids = $ids;
-        $primaryKey = $this->_table()->primaryKey();
+        $primaryKey = $this->_table()->getPrimaryKey();
         $config['conditions'] = [];
         $config['conditions'][] = function ($exp) use ($primaryKey, $ids) {
             return $exp->in($primaryKey, $ids);
@@ -170,7 +173,7 @@ abstract class BaseAction extends CrudBaseAction
      * Stopped callback
      *
      * @param \Crud\Event\Subject $subject Event subject
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      */
     protected function _stopped(Subject $subject)
     {
@@ -183,8 +186,8 @@ abstract class BaseAction extends CrudBaseAction
     /**
      * Handle a bulk event
      *
-     * @param \Cake\ORM\Query $query The query to act upon
+     * @param \Cake\ORM\Query|null $query The query to act upon
      * @return bool
      */
-    abstract protected function _bulk(Query $query);
+    abstract protected function _bulk(Query $query = null);
 }

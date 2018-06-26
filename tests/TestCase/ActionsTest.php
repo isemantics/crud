@@ -4,7 +4,7 @@ namespace Crud\Test\TestSuite;
 use Cake\Core\Plugin;
 use Cake\TestSuite\TestSuite;
 
-class ActionsTest extends \PHPUnit_Framework_TestSuite
+class ActionsTest extends TestSuite
 {
 
     public static function suite()
@@ -18,6 +18,7 @@ class ActionsTest extends \PHPUnit_Framework_TestSuite
         }
 
         $suite->addTestDirectoryRecursive($testPath . '/Action');
+
         return $suite;
     }
 }

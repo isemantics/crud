@@ -1,5 +1,6 @@
+************
 Unit Testing
-============
+************
 
 To ease with unit testing of Crud Listeners and Crud Actions, it's recommended
 to use the proxy methods found in [CrudBaseObject]({{site.url}}/api/develop/class-CrudBaseObject.html).
@@ -7,10 +8,10 @@ to use the proxy methods found in [CrudBaseObject]({{site.url}}/api/develop/clas
 These methods are much easier to mock than the full `CrudComponent` object.
 
 They also allow you to just mock the methods you need for your specific test, rather than the big dependency nightmare the
-CrudComponent can be in some cases.<br />
+CrudComponent can be in some cases.
 
 Proxy methods
-^^^^^^^^^^^^^^
+=============
 
 These methods are available in all `CrudAction` and `CrudListener` objects.
 
@@ -91,7 +92,7 @@ Get the current ``Cake\Network\Request`` for this HTTP Request
 	$this->_request()
 
 _response()
-----------
+-----------
 
 Get the current ``Cake\Network\Response`` for this HTTP Request
 
@@ -109,7 +110,7 @@ Get the entity instance that is created from ``Controller::$modelClass``
 	$this->_entity()
 
 _table()
----------
+--------
 
 Get the table instance that is created from ``Controller::$modelClass``
 

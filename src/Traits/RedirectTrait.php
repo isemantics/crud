@@ -30,50 +30,51 @@ trait RedirectTrait
     public function redirectConfig($name = null, $config = null)
     {
         if ($name === null && $config === null) {
-            return $this->config('redirect');
+            return $this->getConfig('redirect');
         }
 
         $path = sprintf('redirect.%s', $name);
         if ($config === null) {
-            return $this->config($path);
+            return $this->getConfig($path);
         }
 
-        return $this->config($path, $config);
+        return $this->setConfig($path, $config);
     }
 
     /**
      * Returns the redirect_url for this request, with a fallback to the referring page
      *
-     * @param string $default Default URL to use redirect_url is not found in request or data
+     * @param string|null $default Default URL to use redirect_url is not found in request or data
      * @return mixed
      */
     protected function _refererRedirectUrl($default = null)
     {
         $controller = $this->_controller();
+
         return $this->_redirectUrl($controller->referer($default, true));
     }
 
     /**
      * Returns the _redirect_url for this request.
      *
-     * @param string $default Default URL to use if _redirect_url if not found in request or data.
+     * @param string|null $default Default URL to use if _redirect_url if not found in request or data.
      * @return mixed
      */
     protected function _redirectUrl($default = null)
     {
         $request = $this->_request();
 
-        if (!empty($request->data['_redirect_url'])) {
-            return $request->data['_redirect_url'];
+        if (!empty($request->getData('_redirect_url'))) {
+            return $request->getData('_redirect_url');
         }
-        if (!empty($request->query['_redirect_url'])) {
-            return $request->query['_redirect_url'];
+        if (!empty($request->getQuery('_redirect_url'))) {
+            return $request->getQuery('_redirect_url');
         }
-        if (!empty($request->data['redirect_url'])) {
-            return $request->data['redirect_url'];
+        if (!empty($request->getData('redirect_url'))) {
+            return $request->getData('redirect_url');
         }
-        if (!empty($request->query['redirect_url'])) {
-            return $request->query['redirect_url'];
+        if (!empty($request->getQuery('redirect_url'))) {
+            return $request->getQuery('redirect_url');
         }
 
         return $default;
@@ -83,9 +84,9 @@ trait RedirectTrait
      * Called for all redirects inside CRUD
      *
      * @param \Crud\Event\Subject $subject Event subject
-     * @param string|array $url URL
-     * @param int $status Status code
-     * @return \Cake\Network\Response
+     * @param string|array|null $url URL
+     * @param int|null $status Status code
+     * @return \Cake\Http\Response
      */
     protected function _redirect(Subject $subject, $url = null, $status = null)
     {
@@ -93,9 +94,12 @@ trait RedirectTrait
 
         $subject->url = $url;
         $subject->status = $status;
-        $this->_trigger('beforeRedirect', $subject);
+        $event = $this->_trigger('beforeRedirect', $subject);
 
-        $controller = $this->_controller();
-        return $controller->redirect($subject->url, $subject->status);
+        if ($event->isStopped()) {
+            return $this->_controller()->response;
+        }
+
+        return $this->_controller()->redirect($subject->url, $subject->status);
     }
 }

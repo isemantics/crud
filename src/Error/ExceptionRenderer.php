@@ -2,10 +2,8 @@
 namespace Crud\Error;
 
 use Cake\Core\Configure;
-use Cake\Core\Exception\MissingPluginException;
 use Cake\Datasource\ConnectionManager;
-use Cake\Event\Event;
-use Cake\View\Exception\MissingViewException;
+use Cake\Error\Debugger;
 use Exception;
 
 /**
@@ -18,20 +16,20 @@ class ExceptionRenderer extends \Cake\Error\ExceptionRenderer
 {
 
     /**
-     * Renders validation errors and sends a 412 error code
+     * Renders validation errors and sends a 422 error code
      *
-     * @param \Exception $error Exception instance
-     * @return void
+     * @param \Crud\Error\Exception\ValidationException $error Exception instance
+     * @return \Cake\Http\Response
      */
     public function validation($error)
     {
-        $url = $this->controller->request->here();
+        $url = $this->controller->request->getRequestTarget();
         $status = $code = $error->getCode();
         try {
-            $this->controller->response->statusCode($status);
+            $this->controller->response = $this->controller->response->withStatus($status);
         } catch (Exception $e) {
-            $status = 412;
-            $this->controller->response->statusCode($status);
+            $status = 422;
+            $this->controller->response = $this->controller->response->withStatus($status);
         }
 
         $sets = [
@@ -44,6 +42,7 @@ class ExceptionRenderer extends \Cake\Error\ExceptionRenderer
             '_serialize' => ['code', 'url', 'message', 'errorCount', 'errors']
         ];
         $this->controller->set($sets);
+
         return $this->_outputMessage('error400');
     }
 
@@ -56,46 +55,23 @@ class ExceptionRenderer extends \Cake\Error\ExceptionRenderer
      * a MissingView exception
      *
      * @param string $template The template to render.
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      */
     protected function _outputMessage($template)
     {
-        try {
-            $viewVars = ['success', 'data'];
-            $this->controller->set('success', false);
-            $this->controller->set('data', $this->_getErrorData());
-            if (Configure::read('debug')) {
-                $queryLog = $this->_getQueryLog();
-                if ($queryLog) {
-                    $this->controller->set(compact('queryLog'));
-                    $viewVars[] = 'queryLog';
-                }
+        $viewVars = ['success', 'data'];
+        $this->controller->set('success', false);
+        $this->controller->set('data', $this->_getErrorData());
+        if (Configure::read('debug')) {
+            $queryLog = $this->_getQueryLog();
+            if ($queryLog) {
+                $this->controller->set(compact('queryLog'));
+                $viewVars[] = 'queryLog';
             }
-            $this->controller->set('_serialize', $viewVars);
-            $this->controller->render($template);
-            $event = new Event('Controller.shutdown', $this->controller);
-            $this->controller->afterFilter($event);
-            return $this->controller->response;
-        } catch (MissingViewException $e) {
-            $attributes = $e->getAttributes();
-            if (isset($attributes['file']) && strpos($attributes['file'], 'error500') !== false) {
-                return $this->_outputMessageSafe('error500');
-            }
-            return $this->_outputMessage('error500');
-        } catch (MissingPluginException $e) {
-            $attributes = $e->getAttributes();
-            if (isset($attributes['plugin']) && $attributes['plugin'] === $this->controller->plugin) {
-                $this->controller->plugin = null;
-            }
-            return $this->_outputMessageSafe('error500');
-        } catch (\Exception $e) {
-            $this->controller->set([
-                'error' => $e,
-                'message' => $e->getMessage(),
-                'code' => $e->getCode()
-            ]);
-            return $this->_outputMessageSafe('error500');
         }
+        $this->controller->set('_serialize', $viewVars);
+
+        return parent::_outputMessage($template);
     }
 
     /**
@@ -119,8 +95,14 @@ class ExceptionRenderer extends \Cake\Error\ExceptionRenderer
                 'class' => get_class($viewVars['error']),
                 'code' => $viewVars['error']->getCode(),
                 'message' => $viewVars['error']->getMessage(),
-                'trace' => preg_split('@\n@', $viewVars['error']->getTraceAsString()),
             ];
+
+            if (!isset($data['trace'])) {
+                $data['trace'] = Debugger::formatTrace($viewVars['error']->getTrace(), [
+                    'format' => 'array',
+                    'args' => false
+                ]);
+            }
         }
 
         return $data;
@@ -136,11 +118,12 @@ class ExceptionRenderer extends \Cake\Error\ExceptionRenderer
         $queryLog = [];
         $sources = ConnectionManager::configured();
         foreach ($sources as $source) {
-            $logger = ConnectionManager::get($source)->logger();
+            $logger = ConnectionManager::get($source)->getLogger();
             if (method_exists($logger, 'getLogs')) {
                 $queryLog[$source] = $logger->getLogs();
             }
         }
+
         return $queryLog;
     }
 }

@@ -30,6 +30,7 @@ class DeleteAction extends BaseAction
         'enabled' => true,
         'scope' => 'entity',
         'findMethod' => 'all',
+        'deleteMethod' => 'delete',
         'messages' => [
             'success' => [
                 'text' => 'Successfully deleted {name}'
@@ -49,12 +50,12 @@ class DeleteAction extends BaseAction
     ];
 
     /**
-     * HTTP DELETE handler
+     * HTTP POST handler
      *
-     * @param string $id Record id
-     * @return void
+     * @param string|null $id Record id
+     * @return \Cake\Http\Response
      */
-    protected function _handle($id = null)
+    protected function _post($id = null)
     {
         $subject = $this->_subject();
         $subject->set(['id' => $id]);
@@ -66,13 +67,25 @@ class DeleteAction extends BaseAction
             return $this->_stopped($subject);
         }
 
-        if ($this->_table()->delete($entity)) {
+        $method = $this->getConfig('deleteMethod');
+        if ($this->_table()->$method($entity)) {
             $this->_success($subject);
         } else {
             $this->_error($subject);
         }
 
         return $this->_redirect($subject, ['action' => 'index']);
+    }
+
+    /**
+     * HTTP DELETE handler
+     *
+     * @param string|null $id Record id
+     * @return \Cake\Http\Response
+     */
+    protected function _delete($id = null)
+    {
+        return $this->_post($id);
     }
 
     /**
@@ -107,7 +120,7 @@ class DeleteAction extends BaseAction
      * Stopped callback
      *
      * @param \Crud\Event\Subject $subject Event subject
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      */
     protected function _stopped(Subject $subject)
     {

@@ -3,14 +3,16 @@ namespace Crud\Listener;
 
 use Cake\Core\Configure;
 use Cake\Datasource\ConnectionManager;
+use Cake\Datasource\Exception\MissingDatasourceConfigException;
 use Cake\Event\Event;
+use Crud\Log\QueryLogger;
 
 /**
  * When loaded Crud API will include query logs in the response
  *
  * Very much like the DebugKit version, the SQL log will only be appended
  * if the following conditions is true:
- *  1) The request must be 'api' (.json/.xml)
+ *  1) The request must be 'api' (.json/.xml) or 'jsonapi'
  *  2) The debug level must be 2 or above
  *
  * Licensed under The MIT License
@@ -48,8 +50,12 @@ class ApiQueryLogListener extends BaseListener
     public function setupLogging(Event $event)
     {
         foreach ($this->_getSources() as $connectionName) {
-            $this->_getSource($connectionName)->logQueries(true);
-            $this->_getSource($connectionName)->logger(new \Crud\Log\QueryLogger());
+            try {
+                $this->_getSource($connectionName)->logQueries(true);
+                $this->_getSource($connectionName)->setLogger(new QueryLogger());
+            } catch (MissingDatasourceConfigException $e) {
+                //Safe to ignore this :-)
+            }
         }
     }
 
@@ -65,7 +71,7 @@ class ApiQueryLogListener extends BaseListener
             return;
         }
 
-        $this->_action()->config('serialize.queryLog', 'queryLog');
+        $this->_action()->setConfig('serialize.queryLog', 'queryLog');
         $this->_controller()->set('queryLog', $this->_getQueryLogs());
     }
 
@@ -80,10 +86,23 @@ class ApiQueryLogListener extends BaseListener
 
         $queryLog = [];
         foreach ($sources as $source) {
-            $queryLog[$source] = $this->_getSource($source)->logger()->getLogs();
+            $logger = $this->_getSource($source)->getLogger();
+            if (method_exists($logger, 'getLogs')) {
+                $queryLog[$source] = $logger->getLogs();
+            }
         }
 
         return $queryLog;
+    }
+
+    /**
+     * Public getter to expose logs for use in other (exception) classes.
+     *
+     * @return array
+     */
+    public function getQueryLogs()
+    {
+        return $this->_getQueryLogs();
     }
 
     /**
@@ -101,7 +120,7 @@ class ApiQueryLogListener extends BaseListener
      * Get a specific data source
      *
      * @param string $source Datasource name
-     * @return \Cake\Database\Connection
+     * @return \Cake\Datasource\ConnectionInterface
      * @codeCoverageIgnore
      */
     protected function _getSource($source)

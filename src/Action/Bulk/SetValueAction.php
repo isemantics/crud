@@ -31,18 +31,19 @@ class SetValueAction extends BaseAction
             ]
         ];
         $this->_defaultConfig['value'] = null;
-        return parent::__construct($Controller, $config);
+
+        parent::__construct($Controller, $config);
     }
 
     /**
      * Handle a bulk event
      *
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      * @throws \Crud\Error\Exception\ActionNotConfiguredException
      */
     protected function _handle()
     {
-        $field = $this->config('field');
+        $field = $this->getConfig('field');
         if (empty($field)) {
             throw new ActionNotConfiguredException('No field value specified');
         }
@@ -53,16 +54,17 @@ class SetValueAction extends BaseAction
     /**
      * Handle a bulk value set
      *
-     * @param \Cake\ORM\Query $query The query to act upon
+     * @param \Cake\ORM\Query|null $query The query to act upon
      * @return bool
      */
     protected function _bulk(Query $query = null)
     {
-        $field = $this->config('field');
-        $value = $this->config('value');
+        $field = $this->getConfig('field');
+        $value = $this->getConfig('value');
         $query->update()->set([$field => $value]);
         $statement = $query->execute();
         $statement->closeCursor();
-        return $statement->rowCount();
+
+        return (bool)$statement->rowCount();
     }
 }

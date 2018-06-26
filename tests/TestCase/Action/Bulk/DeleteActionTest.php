@@ -13,11 +13,14 @@ class DeleteActionTest extends IntegrationTestCase
 {
 
     /**
-     * fixtures property
+     * Fixtures
      *
      * @var array
      */
-    public $fixtures = ['plugin.crud.blogs'];
+    public $fixtures = [
+        'plugin.crud.blogs',
+        'plugin.crud.users'
+    ];
 
     /**
      * Table class to mock on
@@ -25,6 +28,18 @@ class DeleteActionTest extends IntegrationTestCase
      * @var string
      */
     public $tableClass = 'Crud\Test\App\Model\Table\BlogsTable';
+
+    /**
+     * setUp()
+     *
+     * @return void
+     */
+    public function setUp()
+    {
+        parent::setUp();
+
+        $this->useHttpServer(true);
+    }
 
     /**
      * Data provider with all HTTP verbs
@@ -48,13 +63,13 @@ class DeleteActionTest extends IntegrationTestCase
     public function testAllRequestMethods($method)
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -92,13 +107,13 @@ class DeleteActionTest extends IntegrationTestCase
     public function testStopBeforeBulk()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -130,5 +145,49 @@ class DeleteActionTest extends IntegrationTestCase
         $this->assertEvents(['beforeBulk', 'setFlash', 'beforeRedirect']);
         $this->assertFalse($this->_subject->success);
         $this->assertRedirect('/blogs');
+    }
+
+    /**
+     * Test with UUID request data.
+     *
+     * @return void
+     */
+    public function testUuidRequestData()
+    {
+        $this->_eventManager->on(
+            'Controller.initialize',
+            ['priority' => 11],
+            function ($event) {
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
+
+                $this->_controller->Flash
+                    ->expects($this->once())
+                    ->method('set')
+                    ->with(
+                        'Delete completed successfully',
+                        [
+                            'element' => 'default',
+                            'params' => ['class' => 'message success', 'original' => 'Delete completed successfully'],
+                            'key' => 'flash'
+                        ]
+                    );
+
+                $this->_subscribeToEvents($this->_controller);
+            }
+        );
+
+        $this->post('/users/deleteAll', [
+            'id' => [
+                '0acad6f2-b47e-4fc1-9086-cbc906dc45fd' => '0acad6f2-b47e-4fc1-9086-cbc906dc45fd',
+                '968ad2b3-f41d-4de3-909a-74a3ce85e826' => '968ad2b3-f41d-4de3-909a-74a3ce85e826',
+            ],
+        ]);
+
+        $this->assertEvents(['beforeBulk', 'afterBulk', 'setFlash', 'beforeRedirect']);
+        $this->assertTrue($this->_subject->success);
+        $this->assertRedirect('/users');
     }
 }

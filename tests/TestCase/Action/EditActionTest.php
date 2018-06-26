@@ -27,6 +27,18 @@ class EditActionTest extends IntegrationTestCase
     public $tableClass = 'Crud\Test\App\Model\Table\BlogsTable';
 
     /**
+     * setUp()
+     *
+     * @return void
+     */
+    public function setUp()
+    {
+        parent::setUp();
+
+        $this->useHttpServer(true);
+    }
+
+    /**
      * Test the normal HTTP GET flow of _get
      *
      * @return void
@@ -34,19 +46,19 @@ class EditActionTest extends IntegrationTestCase
     public function testActionGet()
     {
         $this->get('/blogs/edit/1');
-        $result = $this->_response->body();
+        $result = (string)$this->_response->getBody();
 
-        $expected = ['tag' => 'legend', 'content' => 'Edit Blog'];
-        $this->assertTag($expected, $result, 'legend do not match the expected value');
+        $expected = '<legend>Edit Blog</legend>';
+        $this->assertContains($expected, $result, 'legend do not match the expected value');
 
-        $expected = ['id' => 'id', 'attributes' => ['value' => '1']];
-        $this->assertTag($expected, $result, '"id" do not match the expected value');
+        $expected = '<input type="hidden" name="id" id="id" value="1"/>';
+        $this->assertContains($expected, $result, '"id" do not match the expected value');
 
-        $expected = ['id' => 'name', 'attributes' => ['value' => '1st post']];
-        $this->assertTag($expected, $result, '"name" do not match the expected value');
+        $expected = '<input type="text" name="name" maxlength="255" id="name" value="1st post"/>';
+        $this->assertContains($expected, $result, '"name" do not match the expected value');
 
-        $expected = ['id' => 'body', 'content' => '1st post body'];
-        $this->assertTag($expected, $result, '"body" do not match the expected value');
+        $expected = '<textarea name="body" id="body" rows="5">1st post body</textarea>';
+        $this->assertContains($expected, $result, '"body" do not match the expected value');
     }
 
     /**
@@ -59,36 +71,56 @@ class EditActionTest extends IntegrationTestCase
     public function testActionGetWithQueryArgs()
     {
         $this->get('/blogs/edit/1?name=test');
-        $result = $this->_response->body();
+        $result = (string)$this->_response->getBody();
 
-        $expected = ['tag' => 'legend', 'content' => 'Edit Blog'];
-        $this->assertTag($expected, $result, 'legend do not match the expected value');
+        $expected = '<legend>Edit Blog</legend>';
+        $this->assertContains($expected, $result, 'legend do not match the expected value');
 
-        $expected = ['id' => 'id', 'attributes' => ['value' => '1']];
-        $this->assertTag($expected, $result, '"id" do not match the expected value');
+        $expected = '<input type="hidden" name="id" id="id" value="1"/>';
+        $this->assertContains($expected, $result, '"id" do not match the expected value');
 
-        $expected = ['id' => 'name', 'attributes' => ['value' => '1st post']];
-        $this->assertTag($expected, $result, '"name" do not match the expected value');
+        $expected = '<input type="text" name="name" maxlength="255" id="name" value="1st post"/>';
+        $this->assertContains($expected, $result, '"name" do not match the expected value');
 
-        $expected = ['id' => 'body', 'content' => '1st post body'];
-        $this->assertTag($expected, $result, '"body" do not match the expected value');
+        $expected = '<textarea name="body" id="body" rows="5">1st post body</textarea>';
+        $this->assertContains($expected, $result, '"body" do not match the expected value');
     }
 
     /**
-     * Test POST will create a record
+     * Test for custom finder with options.
+     *
+     * @return void
+     */
+    public function testCustomFinder()
+    {
+        $this->_eventManager->on(
+            'Controller.initialize',
+            ['priority' => 11],
+            function ($event) {
+                $this->_controller->Crud->action('edit')
+                    ->findMethod(['withCustomOptions' => ['foo' => 'bar']]);
+            }
+        );
+
+        $this->get('/blogs/edit/1');
+        $this->assertSame(['foo' => 'bar'], $this->_controller->Blogs->customOptions);
+    }
+
+    /**
+     * Test POST will update an existing record
      *
      * @return void
      */
     public function testActionPost()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -125,13 +157,13 @@ class EditActionTest extends IntegrationTestCase
     public function testActionPostErrorSave()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -178,13 +210,13 @@ class EditActionTest extends IntegrationTestCase
     public function testActionPostValidationErrors()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -201,7 +233,7 @@ class EditActionTest extends IntegrationTestCase
                 $this->_subscribeToEvents($this->_controller);
 
                 $this->_controller->Blogs
-                    ->validator()
+                    ->getValidator()
                     ->requirePresence('name')
                     ->add('name', [
                         'length' => [
@@ -222,7 +254,54 @@ class EditActionTest extends IntegrationTestCase
         $this->assertFalse($this->_subject->success);
         $this->assertFalse($this->_subject->created);
 
-        $expected = ['class' => 'error-message', 'content' => 'Name need to be at least 10 characters long'];
-        $this->assertTag($expected, $this->_response->body(), 'Could not find validation error in HTML');
+        $expected = '<div class="error-message">Name need to be at least 10 characters long</div>';
+        $this->assertContains(
+            $expected,
+            (string)$this->_response->getBody(),
+            'Could not find validation error in HTML'
+        );
+    }
+
+    /**
+     * Test PATCH will update an existing record
+     *
+     * @return void
+     */
+    public function testActionPatch()
+    {
+        $this->_eventManager->on(
+            'Controller.initialize',
+            ['priority' => 11],
+            function ($event) {
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
+
+                $this->_controller->Flash
+                    ->expects($this->once())
+                    ->method('set')
+                    ->with(
+                        'Successfully updated blog',
+                        [
+                            'element' => 'default',
+                            'params' => ['class' => 'message success', 'original' => 'Successfully updated blog'],
+                            'key' => 'flash'
+                        ]
+                    );
+
+                $this->_subscribeToEvents($this->_controller);
+            }
+        );
+
+        $this->patch('/blogs/edit/1', [
+            'name' => 'Hello World',
+            'body' => 'Even hotter body'
+        ]);
+
+        $this->assertEvents(['beforeFind', 'afterFind', 'beforeSave', 'afterSave', 'setFlash', 'beforeRedirect']);
+        $this->assertTrue($this->_subject->success);
+        $this->assertFalse($this->_subject->created);
+        $this->assertRedirect('/blogs');
     }
 }

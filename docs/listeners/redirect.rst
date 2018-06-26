@@ -13,14 +13,13 @@ you want to attach it only to specific controllers and actions:
 
   <?php
   class SamplesController extends AppController {
-  
-    public function beforeFilter() {
-      $this->Crud->addListener('Crud.Redirect');
-  
-      parent::beforeFilter();
-    }
+
+      public function beforeFilter(\Cake\Event\Event $event) {
+          $this->Crud->addListener('Crud.Redirect');
+
+          parent::beforeFilter($event);
+      }
   }
-  ?>
 
 
 Attach it using components array, this is recommended if you want to
@@ -30,15 +29,20 @@ attach it to all controllers, application wide:
 
   <?php
   class SamplesController extends AppController {
-  
-    public $components = [
-      'Crud.Crud' => [
-        'actions' => ['index', 'view'],
-        'listeners' => ['Crud.Redirect']
-      ];
-  
+
+    public function initialize()
+    {
+        $this->loadComponent('Crud.Crud', [
+            'actions' => [
+                'index',
+                'view'
+            ],
+            'listeners' => [
+                'Crud.Redirect'
+            ]
+        ]);
+    }
   }
-  ?>
 
 Configuration
 -------------
@@ -83,16 +87,16 @@ The closure takes two arguments:
 
   <?php
   class SamplesController extends AppController {
-  
-    public function beforeFilter() {
+
+    public function beforeFilter(\Cake\Event\Event $event) {
       $listener = $this->Crud->listener('Redirect');
       $listener->reader($name, Closure $closure);
-  
+
       // Example on a reader using Configure
-      $listener->reader('configure.key', function(CrudSubject $subject, $key)) {
+      $listener->reader('configure.key', function(CrudSubject $subject, $key) {
         return Configure::read($key);
       });
-  
+
       parent::beforeFilter();
     }
   }
@@ -117,7 +121,7 @@ Name            Reader             Key         Result                           
 ============== ================== =========== ==================================== =================================================================================================================================
 
 Edit action
-^^^^^^^^^^
+^^^^^^^^^^^
 
 By default Edit Crud Action always redirect to ``array('action' => 'index')`` on ``afterSave``
 
@@ -137,31 +141,32 @@ It's very simple to modify existing or add your own redirect rules:
 .. code-block:: php
 
   <?php
-  class SamplesController extends AppController {
-  
-    public function beforeFilter() {
+  class SamplesController extends AppController
+  {
+
+    public function beforeFilter(\Cake\Event\Event $event)
+    {
       // Get all the redirect rules
       $rules = $this->Crud->action()->redirectConfig();
-  
+
       // Get one named rule only
       $rule = $this->Crud->action()->redirectConfig('add');
-  
+
       // Configure a redirect rule:
       //
       // if $_POST['_view'] is set then redirect to
       // 'view' action with the value of '$subject->id'
       $this->Crud->action()->redirectConfig('view',
-        [
-          'reader' => 'request.data',  // Any reader from the list above
-          'key'    => '_view',         // The key to check for, passed to the reader
-          'url'    => [                // The url to redirect to
-            'action' => 'view',        // The final url will be '/view/$id'
-            ['subject.key', 'id']      // If an array is encountered, it will be expanded the same was as 'reader'+'key'
+          [
+              'reader' => 'request.data',    // Any reader from the list above
+              'key' => '_view',              // The key to check for, passed to the reader
+              'url' => [                     // The url to redirect to
+                  'action' => 'view',        // The final url will be '/view/$id'
+                  ['subject.key', 'id']      // If an array is encountered, it will be expanded the same was as 'reader'+'key'
+              ]
           ]
-        ]
       );
-  
-      parent::beforeFilter();
+
+      parent::beforeFilter($event);
     }
   }
-  ?>

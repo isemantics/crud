@@ -4,7 +4,7 @@ namespace Crud\Test\TestSuite;
 use Cake\Core\Plugin;
 use Cake\TestSuite\TestSuite;
 
-class ListenersTest extends \PHPUnit_Framework_TestSuite
+class ListenersTest extends TestSuite
 {
 
     public static function suite()
@@ -18,6 +18,7 @@ class ListenersTest extends \PHPUnit_Framework_TestSuite
         }
 
         $suite->addTestDirectoryRecursive($testPath . DS . 'Listener');
+
         return $suite;
     }
 }

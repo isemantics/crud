@@ -1,6 +1,7 @@
 <?php
 namespace Crud\Action;
 
+use Crud\Traits\FindMethodTrait;
 use Crud\Traits\SerializeTrait;
 use Crud\Traits\ViewTrait;
 use Crud\Traits\ViewVarTrait;
@@ -14,6 +15,7 @@ use Crud\Traits\ViewVarTrait;
 class IndexAction extends BaseAction
 {
 
+    use FindMethodTrait;
     use SerializeTrait;
     use ViewTrait;
     use ViewVarTrait;
@@ -26,6 +28,7 @@ class IndexAction extends BaseAction
     protected $_defaultConfig = [
         'enabled' => true,
         'scope' => 'table',
+        'findMethod' => 'all',
         'view' => null,
         'viewVar' => null,
         'serialize' => [],
@@ -46,7 +49,8 @@ class IndexAction extends BaseAction
      */
     protected function _handle()
     {
-        $query = $this->_table()->find();
+        list($finder, $options) = $this->_extractFinder();
+        $query = $this->_table()->find($finder, $options);
         $subject = $this->_subject(['success' => true, 'query' => $query]);
 
         $this->_trigger('beforePaginate', $subject);

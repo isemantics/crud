@@ -15,10 +15,10 @@ trait SerializeTrait
      */
     public function serialize($keys = null)
     {
-        if (is_null($keys)) {
-            return (array)$this->config('serialize');
+        if ($keys === null) {
+            return (array)$this->getConfig('serialize');
         }
 
-        return $this->config('serialize', (array)$keys);
+        return $this->setConfig('serialize', (array)$keys);
     }
 }

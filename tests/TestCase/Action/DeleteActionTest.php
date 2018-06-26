@@ -27,22 +27,32 @@ class DeleteActionTest extends IntegrationTestCase
     public $tableClass = 'Crud\Test\App\Model\Table\BlogsTable';
 
     /**
-     * Data provider with all HTTP verbs
+     * setUp()
+     *
+     * @return void
+     */
+    public function setUp()
+    {
+        parent::setUp();
+
+        $this->useHttpServer(true);
+    }
+
+    /**
+     * Data provider with HTTP verbs
      *
      * @return array
      */
     public function allHttpMethodProvider()
     {
         return [
-            ['get'],
             ['post'],
-            ['put'],
             ['delete']
         ];
     }
 
     /**
-     * Test the normal HTTP flow for all HTTP verbs
+     * Test the normal HTTP flow for HTTP verbs
      *
      * @dataProvider allHttpMethodProvider
      * @return void
@@ -50,13 +60,13 @@ class DeleteActionTest extends IntegrationTestCase
     public function testAllRequestMethods($method)
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -100,13 +110,13 @@ class DeleteActionTest extends IntegrationTestCase
     public function testStopDelete()
     {
         $this->_eventManager->on(
-            'Dispatcher.beforeDispatch',
-            ['priority' => 1000],
+            'Controller.initialize',
+            ['priority' => 11],
             function ($event) {
-                $this->_controller->Flash = $this->getMock(
-                    'Cake\Controller\Component\Flash',
-                    ['set']
-                );
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
 
                 $this->_controller->Flash
                     ->expects($this->once())
@@ -138,10 +148,65 @@ class DeleteActionTest extends IntegrationTestCase
             }
         );
 
-        $this->get('/blogs/delete/1');
+        $this->post('/blogs/delete/1');
 
         $this->assertEvents(['beforeFind', 'afterFind', 'beforeDelete', 'setFlash', 'beforeRedirect']);
         $this->assertFalse($this->_subject->success);
         $this->assertRedirect('/blogs');
+    }
+
+    /**
+     * Test the flow when the beforeRedirect event is stopped (no redirection)
+     *
+     * @dataProvider allHttpMethodProvider
+     * @return void
+     */
+    public function testStopBeforeRedirect()
+    {
+        $this->_eventManager->on(
+            'Controller.initialize',
+            ['priority' => 11],
+            function ($event) {
+                $this->_controller->Flash = $this->getMockBuilder('Cake\Controller\Component\FlashComponent')
+                    ->setMethods(['set'])
+                    ->disableOriginalConstructor()
+                    ->getMock();
+
+                $this->_controller->Flash
+                    ->expects($this->once())
+                    ->method('set')
+                    ->with(
+                        'Successfully deleted blog',
+                        [
+                            'element' => 'default',
+                            'params' => ['class' => 'message success', 'original' => 'Successfully deleted blog'],
+                            'key' => 'flash'
+                        ]
+                    );
+
+                $this->_subscribeToEvents($this->_controller);
+
+                $this->_controller->Crud->on('beforeRedirect', function ($event) {
+                    $event->stopPropagation();
+                });
+
+                $this->_controller->Blogs = $this->getMockForModel(
+                    $this->tableClass,
+                    ['delete'],
+                    ['alias' => 'Blogs', 'table' => 'blogs']
+                );
+
+                $this->_controller->Blogs
+                    ->expects($this->once())
+                    ->method('delete')
+                    ->will($this->returnValue(true));
+            }
+        );
+
+        $this->delete('/blogs/delete/2');
+
+        $this->assertEvents(['beforeFind', 'afterFind', 'beforeDelete', 'afterDelete', 'setFlash', 'beforeRedirect']);
+        $this->assertTrue($this->_subject->success);
+        $this->assertNoRedirect();
     }
 }

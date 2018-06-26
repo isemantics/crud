@@ -31,18 +31,19 @@ class ToggleAction extends BaseAction
                 'text' => 'Could not toggle value'
             ]
         ];
-        return parent::__construct($Controller, $config);
+
+        parent::__construct($Controller, $config);
     }
 
     /**
      * Handle a bulk event
      *
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      * @throws \Crud\Error\Exception\ActionNotConfiguredException
      */
     protected function _handle()
     {
-        $field = $this->config('field');
+        $field = $this->getConfig('field');
         if (empty($field)) {
             throw new ActionNotConfiguredException('No field value specified');
         }
@@ -53,16 +54,17 @@ class ToggleAction extends BaseAction
     /**
      * Handle a bulk toggle
      *
-     * @param \Cake\ORM\Query $query The query to act upon
+     * @param \Cake\ORM\Query|null $query The query to act upon
      * @return bool
      */
     protected function _bulk(Query $query = null)
     {
-        $field = $this->config('field');
+        $field = $this->getConfig('field');
         $expression = [new QueryExpression(sprintf('%1$s= NOT %1$s', $field))];
         $query->update()->set($expression);
         $statement = $query->execute();
         $statement->closeCursor();
-        return $statement->rowCount();
+
+        return (bool)$statement->rowCount();
     }
 }

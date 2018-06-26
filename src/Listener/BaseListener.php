@@ -1,7 +1,7 @@
 <?php
 namespace Crud\Listener;
 
-use Crud\Core\Object;
+use Crud\Core\BaseObject;
 
 /**
  * The Base Crud Listener
@@ -11,7 +11,7 @@ use Crud\Core\Object;
  *
  * @codeCoverageIgnore
  */
-abstract class BaseListener extends Object
+abstract class BaseListener extends BaseObject
 {
 
     /**
@@ -73,7 +73,7 @@ abstract class BaseListener extends Object
      * By default it uses Inflector::humanize, but can be changed
      * using the "name" configuration property
      *
-     * @param string $value Value
+     * @param string|null $value Value
      * @return string
      */
     public function resourceName($value = null)

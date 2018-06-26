@@ -14,12 +14,13 @@ Check Success
 
 .. code-block:: phpinline
 
-  public function delete($id) {
-    $this->Crud->on('afterDelete', function(\Cake\Event\Event $event) {
-      if (!$event->subject->success) {
-        $this->log("Delete failed for entity $event->subject->id");
-      }
-    });
+  public function delete($id)
+  {
+      $this->Crud->on('afterDelete', function(\Cake\Event\Event $event) {
+          if (!$event->getSubject()->success) {
+              $this->log("Delete failed for entity " . $event->getSubject()->id);
+          }
+      });
 
-    return $this->Crud->execute();
+      return $this->Crud->execute();
   }

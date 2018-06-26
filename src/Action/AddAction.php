@@ -1,6 +1,7 @@
 <?php
 namespace Crud\Action;
 
+use Crud\Error\Exception\ValidationException;
 use Crud\Event\Subject;
 use Crud\Traits\RedirectTrait;
 use Crud\Traits\SaveMethodTrait;
@@ -61,7 +62,7 @@ class AddAction extends BaseAction
             'error' => [
                 'exception' => [
                     'type' => 'validate',
-                    'class' => '\Crud\Error\Exception\ValidationException'
+                    'class' => ValidationException::class
                 ]
             ]
         ],
@@ -97,7 +98,7 @@ class AddAction extends BaseAction
     {
         $subject = $this->_subject([
             'success' => true,
-            'entity' => $this->_entity($this->_request()->query ?: null, ['validate' => false] + $this->saveOptions())
+            'entity' => $this->_entity($this->_request()->getQuery() ?: null, ['validate' => false] + $this->saveOptions())
         ]);
 
         $this->_trigger('beforeRender', $subject);
@@ -106,30 +107,33 @@ class AddAction extends BaseAction
     /**
      * HTTP POST handler
      *
-     * @return void|\Cake\Network\Response
+     * @return \Cake\Http\Response|null
      */
     protected function _post()
     {
         $subject = $this->_subject([
-            'entity' => $this->_entity($this->_request()->data, $this->saveOptions()),
+            'entity' => $this->_entity($this->_request()->getData(), $this->saveOptions()),
             'saveMethod' => $this->saveMethod(),
             'saveOptions' => $this->saveOptions()
         ]);
 
-        $this->_trigger('beforeSave', $subject);
+        $event = $this->_trigger('beforeSave', $subject);
+        if ($event->isStopped()) {
+            return $this->_stopped($subject);
+        }
 
         $saveCallback = [$this->_table(), $subject->saveMethod];
         if (call_user_func($saveCallback, $subject->entity, $subject->saveOptions)) {
             return $this->_success($subject);
         }
 
-        return $this->_error($subject);
+        $this->_error($subject);
     }
 
     /**
      * HTTP PUT handler
      *
-     * @return void|\Cake\Network\Response
+     * @return \Cake\Http\Response|null
      */
     protected function _put()
     {
@@ -140,7 +144,7 @@ class AddAction extends BaseAction
      * Post success callback
      *
      * @param \Crud\Event\Subject $subject Event subject
-     * @return \Cake\Network\Response
+     * @return \Cake\Http\Response
      */
     protected function _success(Subject $subject)
     {
@@ -165,5 +169,27 @@ class AddAction extends BaseAction
         $this->_trigger('afterSave', $subject);
         $this->setFlash('error', $subject);
         $this->_trigger('beforeRender', $subject);
+    }
+
+    /**
+     * Stopped callback
+     *
+     * @param \Crud\Event\Subject $subject Event subject
+     * @return \Cake\Http\Response
+     */
+    protected function _stopped(Subject $subject)
+    {
+        if (!isset($subject->success)) {
+            $subject->success = false;
+        }
+
+        if ($subject->success) {
+            return $this->_success($subject);
+        }
+
+        $subject->set(['success' => false]);
+        $this->setFlash('error', $subject);
+
+        return $this->_redirect($subject, ['action' => 'index']);
     }
 }
